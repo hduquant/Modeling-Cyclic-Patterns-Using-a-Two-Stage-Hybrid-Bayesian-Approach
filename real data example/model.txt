@@ -1,0 +1,54 @@
+
+model {
+
+for (i in 1:n){ # n individuals
+
+betai[i,1:3] ~ dmnorm(mu.beta[i,1:3],omega[1:3,1:3])
+mu.beta[i,1]<- mu.D 
+mu.beta[i,2]<-r1+beta1*x[i]
+mu.beta[i,3]<-r2+beta2*x[i]
+
+Ri[i] <- sqrt((betai[i,2])^2+(betai[i,3])^2)
+
+phii[i]<-ifelse( (betai[i,3]) >= 0 && (betai[i,2]) > 0, arctan((betai[i,3])/(betai[i,2])),
+     ifelse( (betai[i,3]) <= 0 && (betai[i,2]) < 0, arctan((betai[i,3])/(betai[i,2])) + pi,
+     ifelse( (betai[i,3]) >= 0 && (betai[i,2]) < 0, arctan((betai[i,3])/(betai[i,2])) + pi,
+     ifelse( (betai[i,3]) <= 0 && (betai[i,2]) > 0, arctan((betai[i,3])/(betai[i,2])),
+     ifelse( (betai[i,3]) >= 0 && (betai[i,2]) == 0, pi / 2,
+     ifelse( (betai[i,3]) <= 0 && (betai[i,2]) == 0, 3 * pi / 2,  NAvar))))))
+
+}
+
+ for (j in 1:N){ # t time points
+ mu[j]<-betai[ind[j],1] + betai[ind[j],2]*cos(w[j]*t[j]) - betai[ind[j],3]*sin(w[j]*t[j]) 
+ y[j] ~ dnorm(mu[j],sigma.pre) 
+  }
+
+#### define parameters of interest 
+beta <- sum((Ri-mean(Ri))*(x-mean(x)))/sum((x-mean(x))*(x-mean(x))) 
+R <- mean(Ri)-beta*mean(x)
+Rih <- R+beta*x
+rse<- sqrt(sum((Ri-Rih)^2)/(n-2))
+se.beta<-(rse/sqrt(sum((x-mean(x))*(x-mean(x)))))^2
+se.R<-(rse*sqrt(1/n+mean(x)^2/(sum((x-mean(x))*(x-mean(x))))))^2
+
+phi<- mean(phii)
+se.phi<- sd(phii)^2/n
+
+mu.M<-mean(betai[,1])
+se.mu<-sd(betai[,1])^2/n
+
+###pirors
+sigma.pre ~ dgamma(0.001,0.001)
+sigma2 <- 1/sigma.pre 
+r1 ~ dnorm (0,0.001) 
+r2 ~ dnorm (0,0.001) 
+mu.D ~ dnorm (0,0.001) 
+beta1 ~ dnorm (0,0.001)
+beta2 ~ dnorm (0,0.001) 
+
+omega[1:3,1:3]~dwish(S[1:3,1:3],3) 
+Cov[1:3,1:3]<-inverse(omega[1:3,1:3]) 
+
+}
+
